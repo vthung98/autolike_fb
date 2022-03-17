@@ -1,0 +1,457 @@
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import time
+import json
+from selenium.webdriver.common.action_chains import ActionChains
+import random
+from selenium.webdriver.remote.command import Command
+import requests
+from ham import get_xu, lay_tt_nv, nhan_xu, loginFacebookByCookie
+import re
+import pyautogui
+import xlrd2
+from set_proxy import getPlugin
+from multiprocessing import Pool
+from open_chrome import open_chrome
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.common.by import By
+import numpy
+with open('data.json', 'r') as f:
+    data = json.load(f)
+'''-----------------------------------------------------------------'''
+wb = xlrd2.open_workbook('ds_acc.xlsx')
+sheet1 = wb.sheet_by_index(0)
+
+
+list_cookie = sheet1.col_values(1)
+list_proxy = sheet1.col_values(2)
+list_token = sheet1.col_values(3)
+'''-------------------------------------------------------------------'''
+def run(para_cookie, para_proxy, para_token):
+    # khai bao driver
+    options = webdriver.ChromeOptions()
+    if para_proxy != '':
+        proxy_host = re.compile(r'(.*?):').search(para_proxy).group(1)
+        proxy_port = re.compile(r':(.*?):').search(para_proxy).group(1)
+        proxy_user = 'user'
+        proxy_pass = re.compile(r'r:(.*?)$').search(para_proxy).group(1)
+        options.add_extension(getPlugin(proxy_host, proxy_port, proxy_user, proxy_pass))                # set proxy
+    options.add_argument("--incognito")                                    # khong luu lich su
+    options.add_argument("--disable-blink-features")                       # chống phát hiện auto
+    options.add_argument("--disable-blink-features=AutomationControlled")  # chống phát hiện auto
+    #options.add_argument("--headless")
+    prefs = {"profile.default_content_setting_values.notifications" : 2}   # tắt thông báo
+    options.add_experimental_option("prefs", prefs)
+    driver = webdriver.Chrome(options=options)
+    #khai bao bien la tham so nhap vao
+    nv_like = data["nv_like"]
+    nv_likepage = data["nv_likepage"]                          #nhap vao tu file json
+    nv_camxuc = data["nv_camxuc"]
+    nv_camxuccmt = data["nv_camxuccmt"]
+    nv_cmt = data["nv_cmt"]
+    nv_follow = data["nv_follow"]
+    nv_share = data["nv_share"]
+    nv_group = data["nv_group"]
+    nv_danhgiapage = data["nv_danhgiapage"]                                     #nhap vao tu file json
+    #bien co dinh
+    love = 'LOVE'
+    haha = 'HAHA'
+    wow = 'WOW'
+    sad = 'SAD'
+    angry = 'ANGRY'
+    bat = "on"
+    LIKE = 'LIKE'
+    care = 'CARE'
+    mau1 = '<span>Thích</span>'
+    mau2 = '<span xpath="1">Thích</span>'
+    coordinate_y = random.randint(100, 600)
+    s = random.randint(15,25)
+    giay = random.randint(5, 8)
+    def nghi(ty):
+        time.sleep(ty)
+    # dang nhap fb
+    driver.get('https://www.facebook.com')
+    driver.maximize_window()
+    nghi(2)
+    try:
+        loginFacebookByCookie(driver, para_cookie)
+        nghi(2)
+        driver.find_elements_by_xpath("//*[text()='Thích']")
+    except:
+        print("loi cookie")
+        exit(0)
+    cau_hinh = re.compile(r'c_user=(.*?);').search(para_cookie).group(1)
+    # Đăng nhập
+    requests.get(url='https://traodoisub.com/api/?fields=profile&access_token=%s' % para_token)
+    nghi(giay)
+    #chon cau hinh
+    url_cauhinh = 'https://traodoisub.com/api/?fields=run&id=%s&access_token=%s' % (cau_hinh, para_token)
+    requests.get(url=url_cauhinh)
+    time.sleep(giay)
+    for sovong in range(int(data["so_vong"])):
+        #nv_like[1]
+        if nv_like == bat:
+            solanlike = int(data["solanlike"])
+            xu_codinh1 = get_xu(para_token)
+            #bam vao nv like
+            for NVX1 in range(3):
+                time.sleep(giay)
+                tt_nv1 = lay_tt_nv('like', para_token)
+                id1 = tt_nv1[0]['id']
+                url_nv = 'https://fb.com/'+id1
+                time.sleep(giay)
+                try:
+                    driver.get(url_nv)
+                    nghi(2)
+                    try:
+                        cax1 = driver.find_elements_by_xpath('//div[@aria-label="Thích"]/div/span/i')
+                        tyu1 = cax1[0]
+                    except:
+                        cvq1 = driver.find_elements_by_xpath('//div[@aria-label="Thích"]/div/div/span/i')
+                        tyu1 = cvq1[0]
+                    tyu1.click()
+                    nghi(giay)
+                    try:
+                        driver.find_element_by_xpath("//*[text()='Giờ bạn chưa dùng được tính năng này']")
+                        print('Khóa like')
+                        break
+                    except:
+                        print('--->')
+                    ket_qua1 = nhan_xu('LIKE', id1, para_token)
+                    time.sleep(giay)
+                    xu_hientai1 = int(ket_qua1['data']['xu'])
+                except:
+                    continue
+                if ket_qua1['success'] == 200:
+                    print(ket_qua1['data']['msg'], '  ---> Xu hien tai: ', xu_hientai1)
+                if xu_hientai1 - xu_codinh1 == solanlike*300:
+                    break
+                time.sleep(s)  #khoang cách giữa mỗi lần like
+
+        #nv like page[2]
+        if nv_likepage == bat:
+            solanlikepage = int(data["solanlikepage"])
+            xu_codinh2 = get_xu(para_token)
+            for NVX2 in range(3):
+                tt_nv2 = lay_tt_nv('page', para_token)
+                id2 = tt_nv2[0]['id']
+                url_nv2 = 'https://fb.com/'+id2
+                try:
+                    driver.get(url_nv2)
+                    nghi(giay)
+                    listlike2 = driver.find_elements_by_xpath("//*[text()='Thích']")
+                    nghi(giay)
+                    listlike2[0].click()
+                    nghi(giay)
+                    try:
+                        driver.find_element_by_xpath("//*[text()='Giờ bạn chưa dùng được tính năng này']")
+                        print('Khóa like page'); break
+                    except:
+                        print('--->')
+                    time.sleep(giay)
+                    ket_qua2 = nhan_xu('PAGE', id2, para_token)
+                    nghi(2)
+                    xu_hientai2 = int(ket_qua2['data']['xu'])
+                except:
+                    continue
+                if ket_qua2['success'] == 200:
+                    print(ket_qua2['data']['msg'], '  ---> Xu hien tai: ', xu_hientai2)
+                if xu_hientai2 - xu_codinh2 == solanlikepage * 700:
+                    break
+                time.sleep(s)  # khoang cách giữa mỗi lần like
+
+        #nv cam xuc cheo[3]
+        if nv_camxuc == bat:
+            socamxuc = int(data["socamxuc"])
+            xu_codinh3 = get_xu(para_token)
+            for NVX3 in range(3):
+                driver.execute(Command.W3C_CLEAR_ACTIONS)
+                action3 = ActionChains(driver)
+                tt_nv3 = lay_tt_nv('reaction', para_token)
+                id3 = tt_nv3[0]['id']
+                loaicamxuc = tt_nv3[0]['type']
+                url_nv3 = 'https://fb.com/'+id3
+                try:
+                    driver.get(url_nv3); nghi(giay)
+                    try:
+                        cax = driver.find_elements_by_xpath('//div[@aria-label="Thích"]/div/span/i')
+                        tyu = cax[0]
+                    except:
+                        cvq = driver.find_elements_by_xpath('//div[@aria-label="Thích"]/div/div/span/i')
+                        tyu = cvq[0]
+                    action3.move_to_element(tyu).perform()
+                    time.sleep(2)
+                    list_camxuc = driver.find_elements_by_xpath('//*/canvas')  # xpath cam xuc
+                    time.sleep(2)
+                    if loaicamxuc == 'LOVE':
+                        list_camxuc[1].click()  # vi tri nut tha tim
+                    if loaicamxuc == "HAHA":
+                        list_camxuc[3].click()
+                    if loaicamxuc == 'WOW':
+                        list_camxuc[4].click()
+                    if loaicamxuc == 'ANGRY':
+                        list_camxuc[6].click()
+                    if loaicamxuc == "LIKE":
+                        list_camxuc[0].click()
+                    if loaicamxuc == 'SAD':
+                        list_camxuc[5].click()
+                    if loaicamxuc == 'CARE':
+                        list_camxuc[2].click()
+                    time.sleep(giay)
+                    
+                    ket_qua3 = nhan_xu(loaicamxuc, id3, para_token)
+                    xu_hientai3 = int(ket_qua3['data']['xu'])
+                except:
+                    continue
+                if ket_qua3['success'] == 200:
+                    print(ket_qua3['data']['msg'], '  ---> Xu hien tai: ', xu_hientai3)
+                if xu_hientai3 - xu_codinh3 == socamxuc * 400:
+                    break
+                time.sleep(s)  # khoang cách giữa mỗi reaction
+        driver.get('https://facebook.com')
+        time.sleep(giay)
+        driver.execute_script("window.scrollTo(0, %s)" % coordinate_y)  # dong tac gia
+        try:
+            #nv_camxuccmt[4]
+            if nv_camxuccmt == bat:
+                socamxuccmt = int(data["socamxuccmt"])
+                xu_codinh4 = get_xu(para_token)
+                for NVX4 in range(3):
+                    driver.execute(Command.W3C_CLEAR_ACTIONS)
+                    action4 = ActionChains(driver)
+                    tt_nv4 = lay_tt_nv('reactcmt', para_token)
+                    noidung4 = tt_nv4[0]['name']
+                    id4 = tt_nv4[0]['id']
+                    loaicamxuc4 = tt_nv4[0]['type']
+                    url_nv4 = 'https://fb.com/' + id4
+                    nghi(giay)
+                    try:
+                        driver.get(url_nv4)
+                        nghi(giay)
+                        xpath4 = "//*[text()='%s']" % noidung4
+                        vbc = driver.find_elements_by_xpath(xpath4)
+                        e = vbc[0]
+                        vitri_text = e.location
+                        y_text = vitri_text['y']  # toa do y cua text
+                        list_y_thich = []
+                        listLike4 = driver.find_elements_by_xpath("//*[text()='Thích']")
+                        for ii in listLike4:
+                            vitrinutlike = ii.location
+                            y = vitrinutlike['y']
+                            list_y_thich.append(y)
+                        listkhoangcach = []
+                        for pt in list_y_thich:
+                            if pt > y_text:
+                                khoangcach = pt - y_text
+                                listkhoangcach.append(khoangcach)
+                        khoangcach_min = min(listkhoangcach)
+                        y_cantim = khoangcach_min + 8
+                        action4.move_to_element_with_offset(e, 12, y_cantim).perform()
+                        time.sleep(3)
+                        list_camxuc4 = driver.find_elements_by_xpath('//*/canvas')  # xpath cam xuc
+                        if loaicamxuc4 == 'LOVE':
+                            list_camxuc4[1].click()  # vi tri nut tha tim
+                        if loaicamxuc4 == 'HAHA':
+                            list_camxuc4[3].click()
+                        if loaicamxuc4 == ' WOW':
+                            list_camxuc4[4].click()
+                        if loaicamxuc4 == 'ANGRY':
+                            list_camxuc4[6].click()
+                        if loaicamxuc4 == 'LIKE':
+                            action4.move_to_element_with_offset(e, 12, y_cantim).click().perform()
+
+                        time.sleep(6)
+                        ket_qua4 = nhan_xu(loaicamxuc4+'CMT', id4, para_token)
+                        xu_hientai4 = ket_qua4['data']['xu']
+                    except:
+                        continue
+                    if ket_qua4['success'] == 200:
+                        print(ket_qua4['data']['msg'], '  ---> Xu hien tai: ', xu_hientai4)
+                    if xu_hientai4 - xu_codinh4 == socamxuccmt * 600:
+                        break
+                    time.sleep(s)  # khoang cách giữa mỗi lần like
+        except:
+            pass
+
+        #nv_coment[5]
+        if nv_cmt == bat:
+            solancmt = int(data["solancmt"])
+            xu_codinh5 = get_xu(para_token)
+            for NVX5 in range(3):
+                tt_nv5 = lay_tt_nv('comment', para_token)
+                id5 = tt_nv5[0]['id']
+                text5 = tt_nv5[0]['msg']
+                url_nv5 = 'https://fb.com/' + id5
+                time.sleep(2)
+                try:
+                    driver.get(url_nv5)
+                    nghi(giay)
+                    xpath_cmt = driver.find_elements_by_xpath('//div[@aria-label="Viết bình luận"]')
+                    xpath_cmt[1].send_keys(text5)
+                    xpath_cmt[1].send_keys(Keys.ENTER)
+                    time.sleep(giay)
+                    ket_qua5 = nhan_xu('COMMENT', id5, para_token)
+                    xu_hientai5 = ket_qua5['data']['xu']
+                except:
+                    continue
+                if ket_qua5['success'] == 200:
+                    print(ket_qua5['data']['msg'], '  ---> Xu hien tai: ', xu_hientai5)
+                if xu_hientai5 - xu_codinh5 == solancmt * 600:
+                    break
+                time.sleep(s)  # khoang cách giữa mỗi lần like
+
+        #nv_follow[6]
+        if nv_follow == bat:
+            solanfollow = int(data["solanfollow"])
+            xu_codinh6 = get_xu(para_token)
+            for NVX6 in range(3):
+                new_action6 = ActionChains(driver)
+                tt_nv6 = lay_tt_nv('follow', para_token)
+                id6 = tt_nv6[0]['id']
+                url_nv6 = 'https://fb.com/' + id6
+                try:
+                    driver.get(url_nv6)
+                    nghi(giay)
+                    try:
+                        list_follow = driver.find_elements_by_xpath("//*[text()='Theo dõi']")
+                        list_follow[0].click()
+                        ket_qua6 = nhan_xu('FOLLOW', id6, para_token)
+                        nghi(2)
+                        xu_hientai6 = ket_qua6['data']['xu']
+                        if ket_qua6['success'] == 200:
+                            print(ket_qua6['data']['msg'], '  ---> Xu hien tai: ', xu_hientai6)
+                        if xu_hientai6 - xu_codinh6 == solanfollow * 600:
+                            break
+                    except:
+                        pass
+                    try:
+                        driver.find_element_by_xpath("//*[text()='Theo dõi']").click()
+                        ket_qua6 = nhan_xu('FOLLOW', id6, para_token)
+                        nghi(2)
+                        xu_hientai6 = ket_qua6['data']['xu']
+                        if ket_qua6['success'] == 200:
+                            print(ket_qua6['data']['msg'], '  ---> Xu hien tai: ', xu_hientai6)
+                        if xu_hientai6 - xu_codinh6 == solanfollow * 600:
+                            break
+                    except:
+                        pass
+                    try:
+                        list_xp_nt = driver.find_elements_by_xpath("//*[text()='Nhắn tin']")
+                        xp_nt = list_xp_nt[0]
+                        new_action6.move_to_element_with_offset(xp_nt, 42, 18).click().perform()
+                        time.sleep(2)
+                        list_follow2 = driver.find_elements_by_xpath("//*[text()='Theo dõi']")
+                        list_follow2[0].click()
+                        driver.execute(Command.W3C_CLEAR_ACTIONS)
+                        nghi(giay)
+                        ket_qua6 = nhan_xu('FOLLOW', id6, para_token)
+                        nghi(2)
+                        xu_hientai6 = ket_qua6['data']['xu']
+                        if ket_qua6['success'] == 200:
+                            print(ket_qua6['data']['msg'], '  ---> Xu hien tai: ', xu_hientai6)
+                        if xu_hientai6 - xu_codinh6 == solanfollow * 600:
+                            break
+                    except:
+                        pass
+                except:
+                    continue
+                time.sleep(s)  # khoang cách giữa mỗi lần follow
+
+        #nv_share[7]
+        if nv_share == bat:
+            soshare = int(data["solanlikepage"])
+            xu_codinh7 = get_xu()
+            for NVX7 in range(3):
+                tt_nv7 = lay_tt_nv('share')
+                id7 = tt_nv7[0]['id']
+                url_nv7 = 'https://fb.com/' + id7
+                try:
+                    driver.get(url_nv7)
+                    nghi(giay)
+
+                    ket_qua7 = nhan_xu('SHARE', id7)
+                    xu_hientai7 = int(ket_qua7['data']['xu'])
+                except:
+                    continue
+                if ket_qua7['success'] == 200:
+                    print(ket_qua7['data']['msg'])
+                    print('xu hien tai', xu_hientai7)
+                if xu_hientai7 - xu_codinh7 == soshare * 700:
+                    break
+                time.sleep(s)  # khoang cách giữa mỗi lần share
+
+        #nv_group[8]
+
+        #nv_danhgiapage[9]
+        if nv_danhgiapage == bat:
+            sodanhgia = int(data["sodanhgia"])
+            xu_codinh9 = get_xu()
+            driver.get('https://traodoisub.com');nghi(2)
+            driver.find_element_by_id("username").send_keys('vthung98')
+            driver.find_element_by_id("password").send_keys('facebookculol')
+            driver.find_element_by_id("loginclick").click(); nghi(2)
+            for NVX9 in range(3):
+                try:
+                    driver.get('https://traodoisub.com/ex/review/'); nghi(3); driver.window_handles[0]
+                    text9 = driver.find_elements_by_xpath('//textarea[@class="form-control"]')
+                    text9[0].click(); nghi(3)
+                    nv9 = driver.find_elements_by_xpath('//button[@class="btn btn-outline-primary mr-3 mb-3"]')
+                    nv9[0].click(); nghi(giay)
+                    driver.window_handles[1]
+                    driver.switch_to.window(driver.window_handles[1])
+                    driver.find_element_by_xpath('//*[text()="Có"]').click(); nghi(3)
+                    pyautogui.keyDown('ctrl'); pyautogui.press('v'); pyautogui.keyUp('ctrl'); nghi(2)
+                    driver.find_element_by_xpath('//*[text()="Đăng"]').click(); nghi(giay)
+                    driver.close(driver.window_handles[1])
+                    driver.switch_to.window(driver.window_handles[0])
+                    driver.find_element_by_xpath('//button[@class="btn btn-success mr-3 mb-3"]').click()
+                    xu_hientai9 = get_xu(); nghi(giay)
+                except:
+                    continue
+                if xu_hientai9 - xu_codinh9 == sodanhgia*1500:
+                    print('+1500', '---> xu hien tại la: ', xu_hientai9)
+                    break
+
+        nghi(int(data["tg_nghi_1vong"]))
+    driver.quit()
+
+#open_chrome()
+
+run(list_cookie[2], list_proxy[2], list_token[2])
+
+
+run(list_cookie[0], list_proxy[0], list_token[0])
+
+
+'''matran = numpy.array([list_cookie, list_proxy, list_token])
+nghichdao = matran.transpose()
+for thamso in nghichdao:
+    run(thamso[0], thamso[1])
+
+if __name__ == "__main__":
+    processing = Pool(2)  # 2 la so processing song song
+    bat_dau = processing.starmap(run, [(nghichdao[2][0],nghichdao[2][1],nghichdao[2][2]), (nghichdao[0][0],nghichdao[0][1],nghichdao[0][2])])
+    processing.close()'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
